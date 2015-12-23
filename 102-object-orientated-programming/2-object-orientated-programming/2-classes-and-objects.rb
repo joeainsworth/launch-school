@@ -13,6 +13,10 @@ class Person
     parse_full_name(full_name)
   end
 
+  def to_s
+    name
+  end
+
   private
 
     def parse_full_name(full_name)
@@ -22,13 +26,10 @@ class Person
     end
 end
 
-p bob = Person.new('Robert')
-p bob.name                  # => 'Robert'
-p bob.first_name            # => 'Robert'
-p bob.last_name             # => ''
-p bob.last_name = 'Smith'
-p bob.name                  # => 'Robert Smith'
+bob = Person.new('Robert Smith')
+rob = Person.new('Robert Smith')
 
-p bob.name = "John Adams"
-p bob.first_name            # => 'John'
-p bob.last_name             # => 'Adams'
+p bob.name == rob.name
+
+bob = Person.new("Robert Smith")
+puts "The person's name is: #{bob}"
