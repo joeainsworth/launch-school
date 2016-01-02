@@ -1,149 +1,220 @@
-# Rock paper scissors is a two player game where each player chooses one of three possible moves;
-# - rock
-# - paper
-# - scissors
-# Chosen moves are then compared to see who wins, if the players choose the same moves it's a tie.
-# Noun; Player, Move, Rule
-# Verb; Choose, Compare
+require 'pry'
 
-class Move
-  VALUES = %w(rock paper scissors)
+class Weapon
+  WEAPONS = %w(rock paper scissors lizard spock)
 
-  def initialize(value)
-    @value = value
+  attr_reader :name, :beats, :loses
+
+  def >(other)
+    @beats.include?(other.to_s)
   end
 
-  def scissors?
-    @value == 'scissors'
-  end
-
-  def rock?
-    @value == 'rock?'
-  end
-
-  def paper?
-    @value == 'paper'
-  end
-
-  def >(other_move)
-    (rock? && other_move.scissors?) ||
-      (paper? && other_move.rock?) ||
-      (scissors? && other_move.paper?)
-  end
-
-  def <(other_move)
-    (rock? && other_move.paper?) ||
-      (paper? && other_move.scissors?) ||
-      (scissors? && other_move.rock?)
+  def <(other)
+    @loses.include?(other.to_s)
   end
 
   def to_s
-    @value
+    name
+  end
+end
+
+class Rock < Weapon
+  def initialize
+    @name = 'rock'
+    @beats = %w(lizard scissors)
+    @loses = %w(paper spock)
+  end
+end
+
+class Paper < Weapon
+  def initialize
+    @name = 'paper'
+    @beats = %w(rock spock)
+    @loses = %w(scissors lizard)
+  end
+end
+
+class Scissors < Weapon
+  def initialize
+    @name = 'scissors'
+    @beats = %w(paper lizard)
+    @loses = %w(rock spock)
+  end
+end
+
+class Lizard < Weapon
+  def initialize
+    @name = 'lizard'
+    @beats = %w(spock paper)
+    @loses = %w(scissors rock)
+  end
+end
+
+class Spock < Weapon
+  def initialize
+    @name = 'spock'
+    @beats = %w(scissors rock)
+    @loses = %w(lizard paper)
   end
 end
 
 class Player
-  attr_accessor :move, :name
+  attr_accessor :name, :weapon, :score, :history
 
-  def initialize(player_type = :human)
-    @player_type = player_type
-    @move = nil
+  def initialize
     set_name
-  end
-
-  def human?
-    @player_type == :human
+    @score = 0
+    @history = []
   end
 end
 
 class Human < Player
   def set_name
-    n = ''
+    puts 'Please enter your name:'
+    answer = nil
     loop do
-      puts "What is your name?"
-      n = gets.chomp.capitalize
-      break unless n.empty?
-      puts 'Sorry, you must enter a value.'
+      answer = gets.chomp.capitalize
+      break unless answer.empty?
+      puts 'Please enter a valid name.'
     end
-    self.name = n
+    self.name = answer
+    system 'clear'
   end
 
-  def choose
-    choice = nil
+  def equip_weapon
+    puts "Please select a weapon from #{Weapon::WEAPONS.join(', ')}:"
+    answer = nil
     loop do
-      puts 'Please choose rock, paper or scissors:'
-      choice = gets.chomp
-      break if Move::VALUES.include? choice
-      puts 'Sorry, invalid choice.'
+      answer = gets.chomp.downcase
+      break if Weapon::WEAPONS.include?(answer)
+      puts 'Please enter a valid weapon.'
     end
-    self.move = Move.new(choice)
+    self.weapon = Object.const_get(answer.capitalize).new
+    system 'clear'
   end
 end
 
 class Computer < Player
   def set_name
-    self.name = %w(R2D2 Hal Chappie Sonny).sample
+    self.name = %w(R2D2 Leila Han Obi).sample
   end
 
-  def choose
-    self.move = Move.new(Move::VALUES.sample)
+  # Must create intelligent weapon selection
+  def equip_weapon(human_history)
+    self.weapon = Object.const_get(Weapon::WEAPONS.sample.capitalize).new
   end
 end
 
 class RPSGame
-  attr_accessor :human, :computer
+  TOTAL_ROUNDS = 5
+
+  attr_accessor :human, :computer, :round_count
 
   def initialize
     @human = Human.new
     @computer = Computer.new
+    @round_count = 0
   end
 
-  def display_welcome_message
-    puts 'Welcome to Rock, Paper, Scissors!'
-  end
-
-  def display_goodbye_message
-    puts 'Thanks for playing Rock, Paper, Scissors. Goodbye!'
-  end
-
-  def display_moves
-    puts "#{human.name} choose #{human.move}."
-    puts "#{computer.name} choose #{computer.move}."
-  end
-
-  def display_winner
-    if human.move > computer.move
-      puts "#{human.name} won!"
-    elsif human.move < computer.move
-      puts "#{computer.name} won!"
-    else
-      puts "It's a tie!"
-    end
+  def display_welcome_msg
+    puts "Welcome to Rock, Paper, Scissors #{human.name}"
   end
 
   def play_again?
+    puts 'Would you like to play another round? (Y/n)'
     answer = nil
     loop do
-      puts "Would you like to play again? (y/n)"
       answer = gets.chomp.downcase
-      break if %w(y n).include? answer.downcase
-      puts "You must enter a valid choice."
+      break if %w(y n).include?(answer)
+      puts 'Please enter a valid option.'
     end
-
     answer == 'y' ? true : false
+    system 'clear'
+  end
+
+  def display_weapon_msg
+    puts "#{human.name} has selected #{human.weapon}"
+    puts "#{computer.name} has seleceted #{computer.weapon}"
+  end
+
+  def record_outcome(result)
+    if result == :human
+      human.score += 1
+      human.history << [:won, human.weapon.name]
+      computer.history << [:lost, computer.weapon.name]
+    elsif result == :computer
+      computer.score += 1
+      computer.history << [:won, computer.weapon.name]
+      human.history << [:lost, human.weapon.name]
+    else
+      computer.history << [:tied, computer.weapon.name]
+      human.history << [:tied, human.weapon.name]
+    end
+  end
+
+  def display_outcome_msg(result)
+    puts "=" * 25
+    if result == :human
+      puts "#{human.name} beat #{computer.name}!"
+    elsif result == :computer
+      puts "#{computer.name} beat #{human.name}!"
+    else
+      puts "It's a tie!"
+    end
+    puts "=" * 25
+  end
+
+  def continue_game
+    puts 'Press [ENTER] to continue...'
+    gets.chomp
+    system 'clear'
+  end
+
+  def calculate_outcome
+    if human.weapon > computer.weapon
+      result = :human
+    elsif human.weapon < computer.weapon
+      result = :computer
+    else
+      result = :tie
+    end
+    display_outcome_msg(result)
+    record_outcome(result)
+    self.round_count += 1
+    continue_game
+  end
+
+  def display_stats_msg
+    puts "Round #{round_count} (first to #{TOTAL_ROUNDS} wins)".upcase
+    puts '=' * 25
+    puts "#{human.name} has won #{human.score} round(s)"
+    puts "#{computer.name} has won #{computer.score} round(s)"
+    puts "=" * 25
+    puts "#{human.name}'s recent moves;"
+    human.history.reverse_each { |move| puts "- #{move.join(' with ')}" }
+    puts "#{computer.name}'s recent moves;"
+    computer.history.reverse_each { |move| puts "- #{move.join(' with ')}" }
+    puts '=' * 25
+    continue_game
+  end
+
+  def victor?
+    human.score == TOTAL_ROUNDS || computer.score == TOTAL_ROUNDS
   end
 
   def play
-    display_welcome_message
+    display_welcome_msg
     loop do
-      human.choose
-      computer.choose
-      display_moves
-      display_winner
-      break unless play_again?
+      human.equip_weapon
+      computer.equip_weapon(human.history)
+      display_weapon_msg
+      calculate_outcome
+      display_stats_msg
+      break if victor?
     end
-    display_goodbye_message
+    # display_goodbye_msg
   end
 end
 
+system 'clear'
 RPSGame.new.play
