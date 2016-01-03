@@ -95,13 +95,42 @@ class Human < Player
 end
 
 class Computer < Player
+  attr_accessor :probabilities
+
+  # Establish player personalities and the chance they will pick a particular weapon
+  # The higher the number the greater the chance that the weapon will be selected
+
+  PERSONALITIES = {
+    'R2D2' => {
+      'rock'     => 0.1,
+      'paper'    => 0.2,
+      'scissors' => 0.3,
+      'lizard'   => 0.4,
+      'spock'    => 0.5
+    }
+  }
+
+
   def set_name
-    self.name = %w(R2D2 Leila Han Obi).sample
+    self.name = PERSONALITIES.keys.to_a.sample
+    self.probabilities = PERSONALITIES[name]
+    pry
   end
 
-  # Must create intelligent weapon selection
+  # get history of computer moves
+  # for each move work out wh
+
   def equip_weapon(human_history)
-    self.weapon = Object.const_get(Weapon::WEAPONS.sample.capitalize).new
+    rand_no = rand(0.1..1)
+    choice = nil
+    probabilities.each do |weapon, prob|
+      if prob > rand_no
+        choice = weapon
+        break
+      end
+    end
+    puts choice
+    self.weapon = Object.const_get(choice.capitalize).new
   end
 end
 
