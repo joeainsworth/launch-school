@@ -95,23 +95,16 @@ class Human < Player
 end
 
 class Computer < Player
-  attr_accessor :probabilities
-
-  def initialize
-    super
-    set_probabilities
-  end
-
-  # Personalities and the likelihood they choose a particular weapon are defined in below constant
+  # Personalities and the likelihood they choose a particular weapon are defined in this constant
   # Each integer value is multipled by 10 to give a percentage chance of selection
-  # For example, 'rock' => 4 becomes (4 * 10) = 40%
+  # For example, 'rock' => 4 has a 40% chance of being selected from an array
   PERSONALITIES = {
     'R2D2' => {
-      'rock'     => 4,
-      'paper'    => 3,
+      'rock'     => 3,
+      'paper'    => 1,
       'scissors' => 2,
-      'lizard'   => 2,
-      'spock'    => 1,
+      'lizard'   => 1,
+      'spock'    => 3,
     },
     'Leah' => {
       'rock'     => 2,
@@ -129,6 +122,12 @@ class Computer < Player
     }
   }
 
+  attr_accessor :probabilities
+
+  def initialize
+    super
+    set_probabilities
+  end
 
   def set_name
     self.name = PERSONALITIES.keys.to_a.sample
@@ -138,8 +137,39 @@ class Computer < Player
     self.probabilities = PERSONALITIES[name]
   end
 
-  #
+  def adjust_weapon_weight(adjusted_weapon)
+    # make it less likely the computer chooses the weapon
+    self.probabilities[adjusted_weapon.to_s] -= 1
+    # find a new weapon to reassign the probability to
+    reassigned_weapon = probabilities.keys.select { |weapon| weapon != adjusted_weapon }.sample
+    # reassign the probability to a different weapon
+    self.probabilities[reassigned_weapon] += 1
+  end
+
+  def weapon_weight
+    outcomes ||= {}
+
+    Weapon::WEAPONS.each do |weapon|
+      outcomes[weapon.to_sym] = {:won => 0, :lost => 0, :tied => 0}
+    end
+
+    history.each { |result, weapon| outcomes[weapon.to_sym][result.to_sym] += 1 }
+
+    outcomes.each do |weapon, outcomes|
+      sum = outcomes.values.reduce(:+)
+      if sum > 0
+        if ((100 / sum) * outcomes[:lost]) > 50
+          puts 'yes'
+          adjust_weapon_weight(weapon) unless probabilities[weapon.to_s] == 1
+        end
+      end
+    end
+
+    p probabilities
+  end
+
   def equip_weapon
+    weapon_weight
     choices = []
     probabilities.each do |weapon, prob|
       prob.times { choices << weapon }
