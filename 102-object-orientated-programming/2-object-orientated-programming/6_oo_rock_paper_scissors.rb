@@ -97,40 +97,54 @@ end
 class Computer < Player
   attr_accessor :probabilities
 
-  # Establish player personalities and the chance they will pick a particular weapon
-  # The higher the number the greater the chance that the weapon will be selected
+  def initialize
+    super
+    set_probabilities
+  end
 
+  # Personalities and the likelihood they choose a particular weapon are defined in below constant
+  # Each integer value is multipled by 10 to give a percentage chance of selection
+  # For example, 'rock' => 4 becomes (4 * 10) = 40%
   PERSONALITIES = {
     'R2D2' => {
-      'rock'     => 0.1,
-      'paper'    => 0.2,
-      'scissors' => 0.3,
-      'lizard'   => 0.4,
-      'spock'    => 0.5
+      'rock'     => 4,
+      'paper'    => 3,
+      'scissors' => 2,
+      'lizard'   => 2,
+      'spock'    => 1,
+    },
+    'Leah' => {
+      'rock'     => 2,
+      'paper'    => 1,
+      'scissors' => 5,
+      'lizard'   => 1,
+      'spock'    => 1,
+    },
+    'Felix' => {
+      'rock'     => 1,
+      'paper'    => 2,
+      'scissors' => 2,
+      'lizard'   => 4,
+      'spock'    => 1,
     }
   }
 
 
   def set_name
     self.name = PERSONALITIES.keys.to_a.sample
-    self.probabilities = PERSONALITIES[name]
-    pry
   end
 
-  # get history of computer moves
-  # for each move work out wh
+  def set_probabilities
+    self.probabilities = PERSONALITIES[name]
+  end
 
-  def equip_weapon(human_history)
-    rand_no = rand(0.1..1)
-    choice = nil
+  #
+  def equip_weapon
+    choices = []
     probabilities.each do |weapon, prob|
-      if prob > rand_no
-        choice = weapon
-        break
-      end
+      prob.times { choices << weapon }
     end
-    puts choice
-    self.weapon = Object.const_get(choice.capitalize).new
+    self.weapon = Object.const_get(choices.sample.capitalize).new
   end
 end
 
@@ -235,7 +249,7 @@ class RPSGame
     display_welcome_msg
     loop do
       human.equip_weapon
-      computer.equip_weapon(human.history)
+      computer.equip_weapon
       display_weapon_msg
       calculate_outcome
       display_stats_msg
