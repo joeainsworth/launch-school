@@ -104,21 +104,21 @@ class Computer < Player
       'paper'    => 1,
       'scissors' => 2,
       'lizard'   => 1,
-      'spock'    => 3,
+      'spock'    => 3
     },
     'Leah' => {
       'rock'     => 2,
       'paper'    => 1,
       'scissors' => 5,
       'lizard'   => 1,
-      'spock'    => 1,
+      'spock'    => 1
     },
     'Felix' => {
       'rock'     => 1,
       'paper'    => 2,
       'scissors' => 2,
       'lizard'   => 4,
-      'spock'    => 1,
+      'spock'    => 1
     }
   }
 
@@ -139,33 +139,34 @@ class Computer < Player
 
   def adjust_weapon_weight(adjusted_weapon)
     # make it less likely the computer chooses the weapon
-    self.probabilities[adjusted_weapon.to_s] -= 1
+    probabilities[adjusted_weapon.to_s] -= 1
+
     # find a new weapon to reassign the probability to
-    reassigned_weapon = probabilities.keys.select { |weapon| weapon != adjusted_weapon }.sample
+    reassign_to_weapon = probabilities.keys.select { |weapon| weapon != adjusted_weapon }.sample
+
     # reassign the probability to a different weapon
-    self.probabilities[reassigned_weapon] += 1
+    probabilities[reassign_to_weapon] += 1
   end
 
   def weapon_weight
     outcomes ||= {}
 
     Weapon::WEAPONS.each do |weapon|
-      outcomes[weapon.to_sym] = {:won => 0, :lost => 0, :tied => 0}
+      outcomes[weapon.to_sym] = { won: 0, lost: 0, tied: 0 }
     end
 
     history.each { |result, weapon| outcomes[weapon.to_sym][result.to_sym] += 1 }
 
-    outcomes.each do |weapon, outcomes|
-      sum = outcomes.values.reduce(:+)
+    outcomes.each do |weapon, outcome|
+      sum = outcome.values.reduce(:+)
       if sum > 0
-        if ((100 / sum) * outcomes[:lost]) > 50
-          puts 'yes'
+        # adjust weapon if the probability of loosing when using it is greater than 60%
+        if ((100 / sum) * outcome[:lost]) > 60
+          # unless its probability is already 10%
           adjust_weapon_weight(weapon) unless probabilities[weapon.to_s] == 1
         end
       end
     end
-
-    p probabilities
   end
 
   def equip_weapon
