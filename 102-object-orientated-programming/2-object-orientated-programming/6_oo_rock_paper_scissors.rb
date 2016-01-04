@@ -153,20 +153,21 @@ class Computer < Player
   end
 
   def change_weapon_weight
+    # create a hash of all possible outcomes
     outcomes ||= {}
-
-    Weapon::WEAPONS.each do |weapon|
+    Weapon::WEAPONS.each |weapon|
       outcomes[weapon.to_sym] = { won: 0, lost: 0, tied: 0 }
     end
 
+    # insert results of previous rounds into hash
     history.each { |result, weapon| outcomes[weapon.to_sym][result.to_sym] += 1 }
 
     outcomes.each do |weapon, outcome|
       sum = outcome.values.reduce(:+)
       if sum > 0
-        # adjust weapon if the probability of loosing when using it is greater than 60%
+        # if the probability of loosing when using weapon is greater than 60%
         if ((100 / sum) * outcome[:lost]) > 60
-          # unless its probability is already 10%
+          # unless its probability is already 10% it cannot be lowered further
           adjust_weapon_weight(weapon) unless probabilities[weapon.to_s] == 1
         end
       end
@@ -268,10 +269,10 @@ class RPSGame
 
   def who_is_winning
     if human.score > computer.score
-     :human
-   elsif human.score < computer.score
-     :computer
-   end
+      :human
+    elsif human.score < computer.score
+      :computer
+    end
   end
 
   def display_score_msg
@@ -322,7 +323,7 @@ class RPSGame
       display_weapon_msg
       round_outcome
       display_stats_msg
-      break if victor?
+      victor?
     end
     # display_goodbye_msg
   end
