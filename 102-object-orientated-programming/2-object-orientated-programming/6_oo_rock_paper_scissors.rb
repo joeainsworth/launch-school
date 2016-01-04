@@ -1,4 +1,4 @@
-require 'pry'
+require 'colorize'
 
 class Weapon
   WEAPONS = %w(rock paper scissors lizard spock)
@@ -66,6 +66,10 @@ class Player
     @score = 0
     @history = []
   end
+
+  def to_s
+    name
+  end
 end
 
 class Human < Player
@@ -75,7 +79,7 @@ class Human < Player
     loop do
       answer = gets.chomp.capitalize
       break unless answer.empty?
-      puts 'Please enter a valid name.'
+      puts 'Please enter a valid name.'.red
     end
     self.name = answer
     system 'clear'
@@ -87,7 +91,7 @@ class Human < Player
     loop do
       answer = gets.chomp.downcase
       break if Weapon::WEAPONS.include?(answer)
-      puts 'Please enter a valid weapon.'
+      puts 'Please enter a valid weapon.'.red
     end
     self.weapon = Object.const_get(answer.capitalize).new
     system 'clear'
@@ -138,17 +142,17 @@ class Computer < Player
   end
 
   def adjust_weapon_weight(adjusted_weapon)
-    # make it less likely the computer chooses the weapon
+    # make it 10% less likely the computer chooses the weapon
     probabilities[adjusted_weapon.to_s] -= 1
 
-    # find a new weapon to reassign the probability to
+    # find a new weapon to reassign the 10% to
     reassign_to_weapon = probabilities.keys.select { |weapon| weapon != adjusted_weapon }.sample
 
-    # reassign the probability to a different weapon
+    # reassign the 10%
     probabilities[reassign_to_weapon] += 1
   end
 
-  def weapon_weight
+  def change_weapon_weight
     outcomes ||= {}
 
     Weapon::WEAPONS.each do |weapon|
@@ -170,7 +174,6 @@ class Computer < Player
   end
 
   def equip_weapon
-    weapon_weight
     choices = []
     probabilities.each do |weapon, prob|
       prob.times { choices << weapon }
@@ -191,16 +194,16 @@ class RPSGame
   end
 
   def display_welcome_msg
-    puts "Welcome to Rock, Paper, Scissors #{human.name}"
+    puts "Hello #{human}, Welcome to Rock, Paper, Scissors"
   end
 
   def play_again?
-    puts 'Would you like to play another round? (Y/n)'
+    puts 'Would you like to play another round? (Y/n)'.yellow
     answer = nil
     loop do
       answer = gets.chomp.downcase
       break if %w(y n).include?(answer)
-      puts 'Please enter a valid option.'
+      puts 'Please enter a valid option.'.red
     end
     answer == 'y' ? true : false
     system 'clear'
@@ -216,6 +219,7 @@ class RPSGame
       human.score += 1
       human.history << [:won, human.weapon.name]
       computer.history << [:lost, computer.weapon.name]
+      computer.change_weapon_weight
     elsif result == :computer
       computer.score += 1
       computer.history << [:won, computer.weapon.name]
@@ -227,15 +231,15 @@ class RPSGame
   end
 
   def display_outcome_msg(result)
-    puts "=" * 25
+    line_break
     if result == :human
-      puts "#{human.name} beat #{computer.name}!"
+      puts "#{human} beat #{computer}!".green
     elsif result == :computer
-      puts "#{computer.name} beat #{human.name}!"
+      puts "#{computer} beat #{human}!".red
     else
-      puts "It's a tie!"
+      puts "It's a tie!".yellow
     end
-    puts "=" * 25
+    line_break
   end
 
   def continue_game
@@ -244,31 +248,65 @@ class RPSGame
     system 'clear'
   end
 
-  def calculate_outcome
+  def calculate_round
     if human.weapon > computer.weapon
-      result = :human
+      :human
     elsif human.weapon < computer.weapon
-      result = :computer
+      :computer
     else
-      result = :tie
+      :tie
     end
+  end
+
+  def round_outcome
+    result = calculate_round
     display_outcome_msg(result)
     record_outcome(result)
     self.round_count += 1
     continue_game
   end
 
+  def who_is_winning
+    if human.score > computer.score
+     :human
+   elsif human.score < computer.score
+     :computer
+   end
+  end
+
+  def display_score_msg
+    human_msg = "#{human} has won #{human.score} round(s)"
+    computer_msg = "#{computer} has won #{computer.score} round(s)"
+    case who_is_winning
+    when :human
+      puts human_msg.green
+      puts computer_msg.red
+    when :computer
+      puts human_msg.red
+      puts computer_msg.green
+    else
+      puts human_msg.yellow
+      puts computer_msg.yellow
+    end
+  end
+
+  def display_moves_msg(player)
+    puts "#{player}'s recent moves;"
+    player.history.reverse_each { |result| puts "- #{result.join(' with ')}" }
+  end
+
+  def line_break
+    puts "=" * 50
+  end
+
   def display_stats_msg
-    puts "Round #{round_count} (first to #{TOTAL_ROUNDS} wins)".upcase
-    puts '=' * 25
-    puts "#{human.name} has won #{human.score} round(s)"
-    puts "#{computer.name} has won #{computer.score} round(s)"
-    puts "=" * 25
-    puts "#{human.name}'s recent moves;"
-    human.history.reverse_each { |move| puts "- #{move.join(' with ')}" }
-    puts "#{computer.name}'s recent moves;"
-    computer.history.reverse_each { |move| puts "- #{move.join(' with ')}" }
-    puts '=' * 25
+    puts "First to win #{TOTAL_ROUNDS} rounds is the victor!"
+    line_break
+    display_score_msg
+    line_break
+    display_moves_msg(human)
+    display_moves_msg(computer)
+    line_break
     continue_game
   end
 
@@ -282,7 +320,7 @@ class RPSGame
       human.equip_weapon
       computer.equip_weapon
       display_weapon_msg
-      calculate_outcome
+      round_outcome
       display_stats_msg
       break if victor?
     end
