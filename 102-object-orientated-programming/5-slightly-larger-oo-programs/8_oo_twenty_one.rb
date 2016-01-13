@@ -238,8 +238,8 @@ class Game
 
   def new_game
     system 'clear'
-    player.hand = []
-    dealer.hand = []
+    player.hand.clear
+    dealer.hand.clear
     self.deck = Deck.new
   end
 
