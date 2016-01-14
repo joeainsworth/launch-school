@@ -15,16 +15,12 @@ class Deck
   def setup_deck
     puts "Sorting cards..."
     sleep(1)
-    SUIT.each do |suit|
-      RANK.each do |rank|
-        cards << Card.new(suit, rank)
-      end
-    end
+    SUIT.product(RANK) { |suit, rank| cards << Card.new(suit, rank) }
   end
 
   def deal_card!
     puts "Dealing card..."
-    sleep(0.5)
+    sleep(0.3)
     cards.shift
   end
 
@@ -101,11 +97,11 @@ class Participant
     end
   end
 
-  def display_hand_msg
+  def display_hand_msg(hide_dealer_hand = true)
     display_total_msg
     hand.each do |card|
       puts "- #{card}"
-      if hide_hand
+      if hide_dealer_hand
         puts '- One hidden card'
         break
       end
@@ -145,7 +141,7 @@ class Player < Participant
     @name = answer
   end
 
-  def turn
+  def hit?
     puts "\nWould you like to hit or stay? [h/s]"
     answer = nil
     loop do
@@ -158,16 +154,11 @@ class Player < Participant
 end
 
 class Dealer < Participant
-  def initialize
-    super
-    @hide_hand = true
-  end
-
   def set_name
     @name = "Dealer"
   end
 
-  def turn
+  def hit?
     total < 17
   end
 end
@@ -189,19 +180,27 @@ class Game
     end
   end
 
-  def display_game_msg
+  def display_game_msg(hide_dealer_hand = true)
     system 'clear'
     player.display_hand_msg
-    dealer.display_hand_msg
+    dealer.display_hand_msg(hide_dealer_hand)
   end
 
   def turn(participant, deck)
-    participant.hide_hand = false if participant == dealer
-    display_game_msg
     loop do
-      participant.turn ? participant.hit!(deck) : break
-      display_game_msg
+      display_game_msg(false)
       break if participant.bust? || participant.blackjack?
+      participant.hit? ? participant.hit!(deck) : break
+    end
+  end
+
+  def display_win_loss_or_tie_by_total
+    if player.total > dealer.total
+      puts "#{player} beat #{dealer}!".green
+    elsif player.total < dealer.total
+      puts "#{dealer} beat #{player}!".red
+    else
+      puts "The round was a draw!".yellow
     end
   end
 
@@ -215,13 +214,7 @@ class Game
     elsif dealer.bust?
       puts "#{dealer} bust, #{player} won!".green
     else
-      if player.total > dealer.total
-        puts "#{player} beat #{dealer}!".green
-      elsif player.total < dealer.total
-        puts "#{dealer} beat #{player}!".red
-      else
-        puts "The round was a draw!".yellow
-      end
+      display_win_loss_or_tie_by_total
     end
   end
 
@@ -246,7 +239,6 @@ class Game
   def play
     loop do
       deal_cards
-      display_game_msg
       turn(player, deck) unless player.blackjack?
       turn(dealer, deck) unless player.bust? || player.blackjack?
       round_outcome(player, dealer)
