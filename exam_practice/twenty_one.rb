@@ -1,25 +1,24 @@
-# Classes;
-# Deck
-# Player
-# Dealer
-# Card
-#
-# Deal
-# Stay or Hit
-# Display hand
-# Outcome
-#
-# New game, shuffle cards, deal cards, display cards, loop hit or stay & outcome, loop dealer turn, outcome
-
-require 'pry'
+require 'colorize'
 
 module GameUtilities
   def clear_display
     system 'clear'
   end
 
-  def display(msg)
+  def question(msg)
     puts "=> #{msg}"
+  end
+
+  def won(msg)
+    puts "#{msg}".green
+  end
+
+  def lost(msg)
+    puts "#{msg}".red
+  end
+
+  def draw(msg)
+    puts "#{msg}".yellow
   end
 
   def display_card(card)
@@ -45,11 +44,7 @@ class Deck
   end
 
   def shuffle_deck!
-    SUITS.each do |suit|
-      RANKS.each do |rank|
-        self.cards << Card.new(suit, rank)
-      end
-    end
+    SUITS.product(RANKS) { |suit, rank| self.cards << Card.new(suit, rank) }
     self.cards.shuffle!
   end
 
@@ -108,9 +103,10 @@ class Participant
     @hand = []
   end
 
-  def hand_total
+  def total
     total = 0
     hand.each { |card| total += card.value }
+    hand.count { |card| card == 'A' }.times { total -= 10 if total > 21 }
     total
   end
 
@@ -118,9 +114,21 @@ class Participant
     if hide
       puts "Total: ?"
     else
-      puts "Total: #{hand_total}"
+      puts "Total: #{total}"
     end
     puts
+  end
+
+  def bust?
+    total > 21
+  end
+
+  def blackjack?
+    total == 21
+  end
+
+  def to_s
+    "#{name}"
   end
 end
 
@@ -129,7 +137,7 @@ class Dealer < Participant
     self.name = 'Dealer'
   end
 
-  def display_hand(hide = true)
+  def display_hand(hide)
     puts "#{name}'s hand:"
     hand.each do |card|
       display_card "#{card}"
@@ -138,13 +146,24 @@ class Dealer < Participant
         break
       end
     end
-    total_msg(true)
+    total_msg(hide)
+  end
+
+  def hit_or_stay
+    answer = nil
+    if total < 17
+      answer = 'h'
+    else
+      answer = 's'
+    end
+    sleep 1
+    answer
   end
 end
 
 class Player < Participant
   def set_name
-    display "Please enter your name:"
+    question "Please enter your name:"
     name = nil
     loop do
       name = gets.chomp.capitalize
@@ -161,6 +180,17 @@ class Player < Participant
     end
     total_msg
   end
+
+  def hit_or_stay
+    answer = nil
+    loop do
+      question "Would you like to hit or stay? [h/s]"
+      answer = gets.chomp.downcase
+      break if %w(h s).include?(answer)
+    end
+    clear_display
+    answer
+  end
 end
 
 class Game
@@ -169,7 +199,7 @@ class Game
   attr_accessor :deck, :dealer, :player
 
   def initialize
-    # welcome
+    welcome
     @deck = Deck.new
     @dealer = Dealer.new
     @player = Player.new
@@ -177,8 +207,12 @@ class Game
 
   def welcome
     clear_display
-    display 'Welcome to Twenty One!'
+    puts 'Welcome to Twenty One!'
     continue?
+  end
+
+  def deal_card(participant)
+    participant.hand << deck.deal!
   end
 
   def deal_cards
@@ -188,15 +222,81 @@ class Game
     end
   end
 
-  def display_hands
+  def display_hands(participant)
+    if participant.name != 'Dealer'
+      hide = true
+    else
+      hide = false
+    end
     player.display_hand
-    dealer.display_hand
+    dealer.display_hand(hide)
+  end
+
+  def turn(participant)
+    loop do
+      display_hands(participant)
+      break if participant.bust? || participant.blackjack?
+      move = participant.hit_or_stay
+      deal_card(participant) if move == 'h'
+      break if move == 's'
+      clear_display
+    end
+  end
+
+  def game_decided_by_score_msg
+    if player.total > dealer.total
+      won "#{player} won, #{dealer} lost!"
+    elsif dealer.total > player.total
+      lost "#{dealer} won, #{player} lost!"
+    elsif
+      draw "Game was tied!"
+    end
+  end
+
+  def game_outcome_msg
+    if player.bust?
+      lost "#{player} bust, #{dealer} won!"
+    elsif player.blackjack?
+      won "#{player} won, #{dealer} lost!"
+    elsif dealer.bust?
+      won "#{dealer} bust, #{player} won!"
+    elsif dealer.blackjack?
+      lost "#{dealer} won, #{player} lost!"
+    elsif
+      game_decided_by_score_msg
+    end
+  end
+
+  def play_again?
+    puts
+    answer = nil
+    loop do
+      puts 'Would you like to play again? [y/n]'
+      answer = gets.chomp.downcase
+      break if %w(y n).include?(answer)
+    end
+    return false if answer == 'n'
+    answer
+  end
+
+  def new_game
+    system 'clear'
+    deck.shuffle_deck!
+    player.hand.clear
+    dealer.hand.clear
   end
 
   def play
-    deal_cards
-    display_hands
+    loop do
+      deal_cards
+      turn(player) unless player.blackjack?
+      turn(dealer) unless player.bust? || player.blackjack?
+      game_outcome_msg
+      break unless play_again?
+      new_game
+    end
   end
+
 end
 
 Game.new.play
