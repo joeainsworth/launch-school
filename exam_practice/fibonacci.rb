@@ -12,7 +12,6 @@ end
 max_num = 100
 numbers = []
 1.upto(max_num) { |num| numbers << num }
-fibonacci = fibonacci_sequence(max_num)
 
 # select fibonacci numbers and assign array to variable
 fibonacci_numbers = numbers.select { |num| fibonacci.include?(num) }
